@@ -12,4 +12,6 @@ router.post('/signup', [
   check('password').isLength({ min: 6 }).withMessage('Password must have at least 6 characters.')
 ], userController.signup);
 
+router.post('/login', userController.login);
+
 module.exports = router;

@@ -50,8 +50,45 @@ const signup = async (req, res, next) => {
     return next(new HttpError('Signing up failed, please try again.', 500));
   }
 
-  res.status(201).json({ user: newUser, token });
+  res.status(201).json({ userId: newUser.id, name: newUser.name, email: newUser.email, token });
 
 }
 
+const login = async (req, res, next) => {
+
+  const { email, password } = req.body;
+
+  let user;
+  try {
+    user = await User.findOne({ email: email });
+  } catch (error) {
+    return next(new HttpError('Login failed, please try later.'));
+  }
+
+  if (!user) {
+    return next(new HttpError('Invalid Credentials.', 403));
+  }
+
+  let isValidPassword;
+  try {
+    isValidPassword = await bcrypt.compare(password, user.password);
+  } catch (error) {
+    return next(new HttpError('Login failed, please try later.'));
+  }
+
+  if (!isValidPassword) {
+    return next(new HttpError('Invalid Credentials.', 403));
+  }
+
+  let token;
+  try {
+    token = jwt.sign({userId: user.id, email: user.email}, process.env.JWT_SECRET, {expiresIn: '4h'} );
+  } catch (error) {
+    return next(new HttpError('Logging in failed, please try again.', 500));
+  }
+
+  res.json({ userId: user.id, name: user.name, email: user.email, role: user.role, token });
+};
+
 exports.signup = signup;
+exports.login = login;
