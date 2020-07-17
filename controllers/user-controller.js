@@ -1,11 +1,116 @@
 const User = require('../models/User');
 const { validationResult } = require('express-validator');
+const ObjectId = require('mongoose').Types.ObjectId;
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const dotenv = require('dotenv');
 dotenv.config();
 
 const HttpError = require('../models/HttpError');
+
+// @desc    Get users
+// @route   Get /api/users
+// @access  Private/admin 
+
+const getUsers = async (req, res, next) => {
+  let users;
+  try {
+    users = await User.find({ role: 'user' });
+  } catch (error) {
+    return next(new HttpError('Cannot get users, please try later.'));
+  }
+
+  res.status(200).json({ users });
+};
+
+// @desc    Get single user
+// @route   Get /api/users/:id
+// @access  Private/admin 
+
+const getUser = async (req, res, next) => {
+  let userId = req.params.id;
+  let isValid = ObjectId.isValid(userId);
+  if (!isValid) {
+    return next(new HttpError('Invalid user id.', 500));
+  }
+
+  let user;
+  try {
+    user = await User.findById(userId).select('-password');
+  } catch (error) {
+    return next(new HttpError('Cannot get user, please try later.'));
+  }
+
+  if (!user) {
+    return next(new HttpError('No user for the provided id.'));
+  }
+
+  res.status(200).json({ user });
+
+};
+
+// @desc    Update user
+// @route   PUT /api/users/:id
+// @access  Private/admin 
+
+const updateUser = async (req, res, next) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    res.status(400).json({ errors: errors.array() });
+  }
+
+  let userId = req.params.id;
+  let isValid = ObjectId.isValid(userId);
+  if (!isValid) {
+    return next(new HttpError('Invalid user id.', 500));
+  }
+
+  const { name, email, password } = req.body;
+  let updatedUser;
+  try {
+    updatedUser = await User.findById(req.params.id);
+  } catch (error) {
+    return next(new HttpError('Update user failed, please try later.'));
+  }
+
+  updatedUser.name = name;
+  updatedUser.email = email;
+  updatedUser.password = password;
+
+  await updatedUser.save();
+
+  res.status(200).json({ updatedUser });
+};
+
+// @desc    delete user
+// @route   DELETE /api/users/:id
+// @access  Private/admin
+
+const deleteUser = async (req, res, next) => {
+  let userId = req.params.id;
+  let isValid = ObjectId.isValid(userId);
+  if (!isValid) {
+    return next(new HttpError('Invalid user id.', 500));
+  }
+  let deletedUser;
+  try {
+    deletedUser = await User.findById(userId);
+  } catch (error) {
+    return next(new HttpError('Delete user failed, please try later.'));
+  }
+
+  if (!deletedUser) {
+    return next(new HttpError('No user for the provided id.', 401));
+  }
+
+  await deletedUser.remove();
+
+  res.status(400).json({ message: 'User deleted. '});
+};
+
+// @desc    user signup
+// @route   POST /api/users/signup
+// @access  Public 
 
 const signup = async (req, res, next) => {
   const errors = validationResult(req);
@@ -50,9 +155,13 @@ const signup = async (req, res, next) => {
     return next(new HttpError('Signing up failed, please try again.', 500));
   }
 
-  res.status(201).json({ userId: newUser.id, name: newUser.name, email: newUser.email, token });
+  res.status(201).json({ userId: newUser.id, name: newUser.name, email: newUser.email, role: newUser.role, token });
 
 }
+
+// @desc    user login
+// @route   POST /api/users/login
+// @access  Public
 
 const login = async (req, res, next) => {
 
@@ -64,7 +173,7 @@ const login = async (req, res, next) => {
   } catch (error) {
     return next(new HttpError('Login failed, please try later.'));
   }
-
+  
   if (!user) {
     return next(new HttpError('Invalid Credentials.', 403));
   }
@@ -92,3 +201,7 @@ const login = async (req, res, next) => {
 
 exports.signup = signup;
 exports.login = login;
+exports.getUsers = getUsers;
+exports.getUser = getUser;
+exports.updateUser = updateUser;
+exports.deleteUser = deleteUser;
