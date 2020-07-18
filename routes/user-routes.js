@@ -3,11 +3,12 @@ const { check } = require('express-validator');
 const router = express.Router();
 
 const usersController = require('../controllers/user-controller');
+const {checkAuth, authorize} = require('../middleware/auth');
 
-router.get('/', usersController.getUsers);
-router.get('/:id', usersController.getUser);
-router.put('/:id', usersController.updateUser);
-router.delete('/:id', usersController.deleteUser);
+router.get('/', checkAuth, authorize('admin'), usersController.getUsers);
+router.get('/:id', checkAuth, authorize('admin'), usersController.getUser);
+router.put('/:id', checkAuth, authorize('admin'), usersController.updateUser);
+router.delete('/:id', checkAuth, authorize('admin'), usersController.deleteUser);
 
 router.post('/signup', [
   check('name').not().isEmpty().withMessage('Name is required.'),

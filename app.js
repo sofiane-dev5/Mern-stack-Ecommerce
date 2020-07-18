@@ -1,8 +1,11 @@
+const path = require('path');
+
 const express = require('express');
 const dotenv = require('dotenv');
 
 const connectDB = require('./db');
 const usersRoutes = require('./routes/user-routes');
+const productsRoutes = require('./routes/products-routes');
 
 dotenv.config();
 
@@ -10,10 +13,13 @@ const app = express();
 
 app.use(express.json());
 
+app.use(express.static(path.join(__dirname)));
+
 // routes middleware
 app.use('/api/users', usersRoutes);
+app.use('/api/products', productsRoutes);
 
-const port = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5000;
 
 app.use((error, req, res, next) => {
   if (res.headerSent) {
@@ -25,4 +31,4 @@ app.use((error, req, res, next) => {
 
 connectDB();
 
-app.listen(port);
+app.listen(PORT);
